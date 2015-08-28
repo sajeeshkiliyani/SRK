@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:file="http://www.mulesoft.org/schema/mule/file" version="EE-3.7.0" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:core="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:spring="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd">
+	<http:listener-config doc:name="HTTP Listener Configuration"
+		host="0.0.0.0" name="HTTP_Listener_Configuration" port="8081" />
+    <string-to-byte-array-transformer name="String_to_Byte_Array" doc:name="String to Byte Array"/>
+    <db:mysql-config name="MySQL_Configuration" host="localhost" port="3306" user="root" database="IVS" doc:name="MySQL Configuration"/>
+    <jms:activemq-connector name="Active_MQ" specification="1.1" brokerURL="tcp://localhost:61616" validateConnections="false" doc:name="Active MQ">
+    <reconnect frequency="5000"/>
+</jms:activemq-connector>
+    <flow name="GetJourneyFlow" initialState="started">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/esb/journeys" doc:name="HTTP" allowedMethods="GET">
+            <http:response-builder>
+                <http:header headerName="Access-Control-Allow-Origin" value="*"/>
+            </http:response-builder>
+        </http:listener>
+        <db:select config-ref="MySQL_Configuration" doc:name="Database">
+            <db:parameterized-query><![CDATA[select Id,Z,A,S,I,L,NaamSchip, CallSign from JOURNEY]]></db:parameterized-query>
+        </db:select>
+        <json:object-to-json-transformer doc:name="Object to JSON"/>
+    </flow>
+    <flow name="UpdateJourneyFlow" initialState="started">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/esb/journeys" allowedMethods="PUT" doc:name="HTTP"/>
+        <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
+        <db:update config-ref="MySQL_Configuration" doc:name="Database">
+            <db:parameterized-query><![CDATA[UPDATE JOURNEY SET Z=#[message.payload.Z],A=#[message.payload.A],S=#[message.payload.S],I=#[message.payload.I],L=#[message.payload.L]  WHERE ID=#[message.payload.Id]]]></db:parameterized-query>
+        </db:update>
+        <json:object-to-json-transformer doc:name="Object to JSON"/>
+        <jms:outbound-endpoint topic="jms/JourneyTopic" connector-ref="Active_MQ" doc:name="JMS"/>
+    </flow>
+</mule>
