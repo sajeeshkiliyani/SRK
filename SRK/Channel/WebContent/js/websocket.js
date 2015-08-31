@@ -21,9 +21,20 @@ function onOpen() {
 
 function onMessage(evt) {
 	//writeToScreen('<span style="color: blue;">RESPONSE: ' + evt.data + '</span>');
-	var e = document.getElementById('app');
-	var scope = angular.element(e).scope();
-	writeToScreen('<span style="color: blue;">RESPONSE: ' + $scope.data + '</span>');
+
+	var data = angular.fromJson(evt.data);
+
+	var appElement = document.querySelector('[ng-controller="MainCtrl"]');
+    var $scope = angular.element(appElement).scope();
+    $scope.$apply(function() {
+    	for (var int = 0; int < $scope.journeys.data.length; int++) {
+			var record = $scope.journeys.data[int];
+			if (record.Id == data.Id) {
+				$scope.journeys.data[int] = data;
+
+			}
+		}
+    });
 }
 
 
