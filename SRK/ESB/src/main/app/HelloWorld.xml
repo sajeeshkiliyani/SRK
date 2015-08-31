@@ -18,6 +18,8 @@ http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/
     <jms:activemq-connector name="Active_MQ" specification="1.1" brokerURL="tcp://localhost:61616" validateConnections="false" doc:name="Active MQ">
     <reconnect frequency="5000"/>
 </jms:activemq-connector>
+    <asynchronous-processing-strategy name="Asynchronous_Processing_Strategy" doc:name="Asynchronous Processing Strategy"/>
+    <byte-array-to-string-transformer name="Byte_Array_to_String" doc:name="Byte Array to String"/>
     <flow name="GetJourneyFlow" initialState="started">
         <http:listener config-ref="HTTP_Listener_Configuration" path="/esb/journeys" doc:name="HTTP" allowedMethods="GET">
             <http:response-builder>
@@ -32,10 +34,13 @@ http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/
     <flow name="UpdateJourneyFlow" initialState="started">
         <http:listener config-ref="HTTP_Listener_Configuration" path="/esb/journeys" allowedMethods="PUT" doc:name="HTTP"/>
         <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
+        <async doc:name="Async">
+            <json:object-to-json-transformer doc:name="Object to JSON"/>
+            <jms:outbound-endpoint topic="JourneyTopic" connector-ref="Active_MQ" doc:name="JMS"/>
+        </async>
         <db:update config-ref="MySQL_Configuration" doc:name="Database">
             <db:parameterized-query><![CDATA[UPDATE JOURNEY SET Z=#[message.payload.Z],A=#[message.payload.A],S=#[message.payload.S],I=#[message.payload.I],L=#[message.payload.L]  WHERE ID=#[message.payload.Id]]]></db:parameterized-query>
         </db:update>
         <json:object-to-json-transformer doc:name="Object to JSON"/>
-        <jms:outbound-endpoint topic="jms/JourneyTopic" connector-ref="Active_MQ" doc:name="JMS"/>
     </flow>
 </mule>
