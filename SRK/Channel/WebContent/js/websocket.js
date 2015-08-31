@@ -9,6 +9,7 @@ function onError(evt) {
 
 var output = document.getElementById("output");
 websocket.onopen = function(evt) { onOpen(evt) };
+websocket.onmessage = function(evt) { onMessage(evt) };
 
 function writeToScreen(message) {
     output.innerHTML += message + "<br>";
@@ -16,6 +17,13 @@ function writeToScreen(message) {
 
 function onOpen() {
     writeToScreen("<p>WebSocket: Notification Enabled</p>");
+}
+
+function onMessage(evt) {
+	//writeToScreen('<span style="color: blue;">RESPONSE: ' + evt.data + '</span>');
+	var e = document.getElementById('app');
+	var scope = angular.element(e).scope();
+	writeToScreen('<span style="color: blue;">RESPONSE: ' + $scope.data + '</span>');
 }
 
 
